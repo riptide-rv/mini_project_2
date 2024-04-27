@@ -30,22 +30,19 @@ from utils.torch_utils import select_device, smart_inference_mode
 
 
 class TrackerModel:
-    def __init__(self, source):
+    def __init__(self, source, counter, frame):
         self.deepsort = self.initialize_deepsort()
         self.data_deque = {}
         self.className = self.classNames()
-        self.c = Counter()  
-        self.source = source
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.host = 'localhost'
-        self.port = 8000
-        self.server_socket.bind((self.host, self.port))
-        self.server_socket.listen(1)
-        self.conn, self.addr = self.server_socket.accept()    
+        self.c = counter  
+        self.source = source 
+        self.save_img = True
+        self.view_img = False
+        self.frame = counter.frame
+        
         print("Server is listening for incoming connections")
         self.run()
-    def get_next_frame(self):
-        return self.frame
+    
     def initialize_deepsort(self):
         print("Initializing DeepSort")
         
@@ -143,12 +140,7 @@ class TrackerModel:
                     thickness = int(np.sqrt(64 / float(i + i)) * 1.5)
                     # draw trails
                     cv2.line(frame, self.data_deque[id][i - 1], self.data_deque[id][i], color, thickness)
-            serialized_frame = pickle.dumps(frame)
-            # Accept a client connection
-            print(f"Connected to {self.addr}")
-            # Send the serialized frame to the client
-            self.conn.sendall(serialized_frame)  
-            print("size of frame", sys.getsizeof(serialized_frame))
+        
         return frame
 
 
@@ -224,13 +216,13 @@ class TrackerModel:
         bs = 1  # batch_size
         if webcam:
             view_img = check_imshow(warn=True)
-            dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
+            dataset = LoadStreams(self.c,source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
             bs = len(dataset)
         elif screenshot:
             dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
         else:
             print("rtsp")
-            dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
+            dataset = LoadImages(source, c=self.c, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
         vid_path, vid_writer = [None] * bs, [None] * bs
 
         # Run inference
@@ -307,17 +299,22 @@ class TrackerModel:
                         identities = outputs[:, -2]
                         object_id = outputs[:, -1]
                         self.draw_boxes(ims, bbox_xyxy, draw_trails, identities, object_id)
-
+                        self.c.set_frame(ims)
+                    if self.c.stop:
+                        break
+                    if self.c.stop:
+                        exit()
                 # Stream results
-                if view_img:
+                if self.view_img:
                     if platform.system() == 'Linux' and p not in windows:
                         windows.append(p)
                         cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
                         cv2.resizeWindow(str(p), ims.shape[1], ims.shape[0])
                     cv2.imshow(str(p), ims)
-                    cv2.waitKey(1)  # 1 millisecond
+                    cv2.waitKey(1)
+                      # 1 millisecond
                 # Save results (image with detections)
-                if save_img:
+                if self.save_img:
                     if vid_path[i] != save_path:  # new video
                         vid_path[i] = save_path
                         if isinstance(vid_writer[i], cv2.VideoWriter):

@@ -236,7 +236,8 @@ class LoadScreenshots:
 
 class LoadImages:
     # YOLOv5 image/video dataloader, i.e. `python detect.py --source image.jpg/vid.mp4`
-    def __init__(self, path, img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
+    def __init__(self, c, path, img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
+        self.c = c
         files = []
         for p in sorted(path) if isinstance(path, (list, tuple)) else [path]:
             p = str(Path(p).resolve())
@@ -274,6 +275,8 @@ class LoadImages:
         return self
 
     def __next__(self):
+        if self.c.stop:
+            raise StopIteration
         if self.count == self.nf:
             raise StopIteration
         path = self.files[self.count]
@@ -343,9 +346,10 @@ class LoadImages:
 
 class LoadStreams:
     # YOLOv5 streamloader, i.e. `python detect.py --source 'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP streams`
-    def __init__(self, sources='streams.txt', img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
+    def __init__(self,c, sources='streams.txt', img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
         torch.backends.cudnn.benchmark = True  # faster for fixed-size inference
         self.mode = 'stream'
+        self.c = c
         self.img_size = img_size
         self.stride = stride
         self.vid_stride = vid_stride  # video frame-rate stride
@@ -413,6 +417,9 @@ class LoadStreams:
     def __next__(self):
         self.count += 1
         if not all(x.is_alive() for x in self.threads) or cv2.waitKey(1) == ord('q'):  # q to quit
+            cv2.destroyAllWindows()
+            raise StopIteration
+        if self.c.stop:
             cv2.destroyAllWindows()
             raise StopIteration
 
