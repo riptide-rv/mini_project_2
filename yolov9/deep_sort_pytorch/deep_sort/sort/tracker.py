@@ -5,7 +5,7 @@ from . import kalman_filter
 from . import linear_assignment
 from . import iou_matching
 from .track import Track
-from  tracker_data.Person import Person
+
 
 class Tracker:
     """
@@ -47,7 +47,7 @@ class Tracker:
         self.tracks = []
         self._next_id = 1
         self.count = 0
-        self.persons = Person()
+        
 
     def predict(self):
         """Propagate track state distributions one time step forward.
@@ -85,7 +85,7 @@ class Tracker:
 
             self._initiate_track(detections[detection_idx])
             self.count += 1
-            print(f"new tracks {self.count}")
+           
         self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
         # Update distance metric.
@@ -143,6 +143,6 @@ class Tracker:
     def _initiate_track(self, detection):
         mean, covariance = self.kf.initiate(detection.to_xyah())
         self.tracks.append(Track(
-            mean, covariance, self._next_id, self.n_init, self.max_age,detection.oid,self.persons,
+            mean, covariance, self._next_id, self.n_init, self.max_age,detection.oid,
             detection.feature))
         self._next_id += 1

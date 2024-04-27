@@ -1,4 +1,4 @@
-class Person:
+class VideoData:
 
     def __init__(self):
         self.count = 0

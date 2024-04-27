@@ -261,7 +261,7 @@ class LoadImages:
         self.mode = 'image'
         self.auto = auto
         self.transforms = transforms  # optional
-        self.vid_stride = vid_stride  # video frame-rate stride
+        self.vid_stride = int(round(vid_stride / 15)) # video frame-rate stride
         if any(videos):
             self._new_video(videos[0])  # new video
         else:
@@ -317,8 +317,14 @@ class LoadImages:
         # Create a new video capture object
         self.frame = 0
         self.cap = cv2.VideoCapture(path)
-        self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.vid_stride)
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.vid_stride = int(round(self.fps / 15))
+        self.vid_stride = 1 if self.vid_stride < 1 else self.vid_stride
+        self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.vid_stride )
         self.orientation = int(self.cap.get(cv2.CAP_PROP_ORIENTATION_META))  # rotation degrees
+       
+         # frames per second
+        print("video stride is ", self.vid_stride)
         # self.cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 0)  # disable https://github.com/ultralytics/yolov5/issues/8493
 
     def _cv2_rotate(self, im):
@@ -365,7 +371,7 @@ class LoadStreams:
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS)
             print(f"fps is {fps}")
-            self.vid_stride = fps / 15  # set 15 FPS
+            self.vid_stride = fps / 15 # set 15 FPS
               # warning: may return 0 or nan
             self.frames[i] = max(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), 0) or float('inf')  # infinite stream fallback
             self.fps[i] = 15  # 30 FPS fallback
