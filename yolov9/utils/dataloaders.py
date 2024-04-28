@@ -262,7 +262,7 @@ class LoadImages:
         self.mode = 'image'
         self.auto = auto
         self.transforms = transforms  # optional
-        self.vid_stride = int(round(vid_stride / 15)) # video frame-rate stride
+        self.vid_stride = 1 # video frame-rate stride
         if any(videos):
             self._new_video(videos[0])  # new video
         else:
@@ -321,8 +321,8 @@ class LoadImages:
         self.frame = 0
         self.cap = cv2.VideoCapture(path)
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        self.vid_stride = int(round(self.fps / 15))
-        self.vid_stride = 1 if self.vid_stride < 1 else self.vid_stride
+        #self.vid_stride = int(round(self.fps / 15))
+        self.vid_stride = 1 
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.vid_stride )
         self.orientation = int(self.cap.get(cv2.CAP_PROP_ORIENTATION_META))  # rotation degrees
        
@@ -370,12 +370,13 @@ class LoadStreams:
                 assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
                 assert not is_kaggle(), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
             cap = cv2.VideoCapture(s)
+            self.cap = cap
             assert cap.isOpened(), f'{st}Failed to open {s}'
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS)
             print(f"fps is {fps}")
-            self.vid_stride = fps / 15 # set 15 FPS
+            self.vid_stride = 1 # set 15 FPS
               # warning: may return 0 or nan
             self.frames[i] = max(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), 0) or float('inf')  # infinite stream fallback
             self.fps[i] = 15  # 30 FPS fallback
@@ -416,13 +417,17 @@ class LoadStreams:
 
     def __next__(self):
         self.count += 1
-        if not all(x.is_alive() for x in self.threads) or cv2.waitKey(1) == ord('q'):  # q to quit
-            cv2.destroyAllWindows()
-            raise StopIteration
+
         if self.c.stop:
             cv2.destroyAllWindows()
+            self.cap.release()
             raise StopIteration
 
+        if not all(x.is_alive() for x in self.threads) or cv2.waitKey(1) == ord('q'):  # q to quit
+            cv2.destroyAllWindows()
+            self.cap.release()
+            raise StopIteration
+        
         im0 = self.imgs.copy()
         if self.transforms:
             im = np.stack([self.transforms(x) for x in im0])  # transforms

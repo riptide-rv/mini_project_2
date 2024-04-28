@@ -1,5 +1,5 @@
 
-from gui.test import GUIApp
+from gui.gui import GUIApp
 
 
 if __name__ == "__main__":

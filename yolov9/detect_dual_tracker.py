@@ -1,4 +1,4 @@
-from test_utils import Counter
+from yolov9.video_stat import Counter
 
 import argparse
 import os
